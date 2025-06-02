@@ -25,13 +25,8 @@ jobs:
         node-version: '18'
         cache: 'npm'
 
-    - name: List directory contents
-      run: ls -la
-
     - name: Install dependencies
-      run: |
-        npm ci
-        npm list multiple-cucumber-html-reporter
+      run: npm ci
 
     - name: Install Playwright browsers
       run: npx playwright install --with-deps chromium
@@ -39,9 +34,8 @@ jobs:
     - name: Create directories for artifacts
       run: |
         mkdir -p test-results
-        mkdir -p playwright-report/cucumber-report
+        mkdir -p playwright-report
         mkdir -p screenshots
-        ls -la
 
     - name: Create .env file
       run: |
@@ -52,55 +46,19 @@ jobs:
       run: |
         echo '${{ secrets.GMAIL_TOKEN }}' > token.json
 
-    - name: Run Cucumber tests
-      run: npx cucumber-js src/test/features/login.feature --format html:cucumber-report.html --format json:test-results/cucumber-report.json
+    - name: Run Cucumber tests with HTML report
+      run: |
+        npx cucumber-js \
+          src/test/features/login.feature \
+          --format html:playwright-report/cucumber-report.html \
+          --format json:test-results/cucumber-report.json \
+          --format summary
       env:
         GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       continue-on-error: true
 
-    - name: Generate detailed HTML report
-      if: always()
-      run: |
-        echo "Creating report generation script..."
-        cat << 'EOF' > generate-report.js
-        const report = require('multiple-cucumber-html-reporter');
-        report.generate({
-          jsonDir: 'test-results',
-          reportPath: './playwright-report/cucumber-report',
-          metadata: {
-            browser: {
-              name: 'chromium',
-              version: '118'
-            },
-            device: 'GitHub Actions - Ubuntu',
-            platform: {
-              name: 'ubuntu',
-              version: '22.04'
-            }
-          },
-          customData: {
-            title: 'Test Execution Info',
-            data: [
-              { label: 'Project', value: 'NinjaOne Automation' },
-              { label: 'Release', value: '1.0.0' },
-              { label: 'Execution Start Time', value: new Date().toISOString() },
-              { label: 'Execution End Time', value: new Date().toISOString() }
-            ]
-          },
-          displayDuration: true,
-          durationInMS: true,
-          displayReportTime: true,
-          disableLog: false,
-          pageTitle: 'NinjaOne Test Automation Report',
-          reportName: 'NinjaOne Test Automation Report',
-          pageFooter: '<div class="created-by">Created by Test Automation Team</div>'
-        });
-        EOF
-        echo "Running report generation script..."
-        node generate-report.js
-
-    - name: List artifacts before upload
+    - name: List artifacts
       if: always()
       run: |
         echo "Contents of current directory:"
@@ -112,17 +70,7 @@ jobs:
         echo "Contents of screenshots:"
         ls -la screenshots || echo "screenshots not found"
 
-    - name: Upload Cucumber HTML report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: cucumber-report
-        path: |
-          cucumber-report.html
-          playwright-report/cucumber-report/**
-        retention-days: 30
-
-    - name: Upload test results and screenshots
+    - name: Upload test artifacts
       if: always()
       uses: actions/upload-artifact@v4
       with:
