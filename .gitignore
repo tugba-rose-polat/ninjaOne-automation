@@ -1,0 +1,12 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+screenshots/
+videos/
+*.log
+.env
+.DS_Store
+token.json
+mfa_secrets.json
+cucumber-report.html 

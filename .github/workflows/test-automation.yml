@@ -1,0 +1,68 @@
+name: NinjaOne Test Automation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps chromium
+
+    - name: Create directories for artifacts
+      run: |
+        mkdir -p test-results
+        mkdir -p playwright-report
+        mkdir -p screenshots
+
+    - name: Run Cucumber tests
+      run: npx cucumber-js src/test/features/login.feature --format html:cucumber-report.html --format json:test-results/cucumber-report.json
+      env:
+        GMAIL_TOKEN: ${{ secrets.GMAIL_TOKEN }}
+      continue-on-error: true
+
+    - name: Generate detailed HTML report
+      if: always()
+      run: npm run generate:report
+
+    - name: Upload Cucumber HTML report
+      uses: actions/upload-artifact@v3
+      with:
+        name: cucumber-report
+        path: |
+          cucumber-report.html
+          playwright-report/cucumber-report/**
+
+    - name: Upload test results and screenshots
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: |
+          test-results/
+          playwright-report/
+          screenshots/
+
+    - name: Deploy report to GitHub Pages
+      if: always()
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./playwright-report
+        publish_branch: gh-pages 
