@@ -16,13 +16,17 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
+
+    - name: List directory contents
+      run: ls -la
 
     - name: Install dependencies
       run: npm ci
@@ -35,6 +39,7 @@ jobs:
         mkdir -p test-results
         mkdir -p playwright-report
         mkdir -p screenshots
+        ls -la
 
     - name: Create .env file
       run: |
@@ -56,24 +61,38 @@ jobs:
       if: always()
       run: npm run generate:report
 
+    - name: List artifacts before upload
+      if: always()
+      run: |
+        echo "Contents of current directory:"
+        ls -la
+        echo "Contents of test-results:"
+        ls -la test-results || echo "test-results not found"
+        echo "Contents of playwright-report:"
+        ls -la playwright-report || echo "playwright-report not found"
+        echo "Contents of screenshots:"
+        ls -la screenshots || echo "screenshots not found"
+
     - name: Upload Cucumber HTML report
       if: always()
-      uses: actions/upload-artifact@v2.3.1
+      uses: actions/upload-artifact@v4
       with:
         name: cucumber-report
         path: |
           cucumber-report.html
           playwright-report/cucumber-report/**
+        retention-days: 30
 
     - name: Upload test results and screenshots
       if: always()
-      uses: actions/upload-artifact@v2.3.1
+      uses: actions/upload-artifact@v4
       with:
         name: test-results
         path: |
           test-results/
           playwright-report/
           screenshots/
+        retention-days: 30
 
     - name: Deploy report to GitHub Pages
       if: always()
