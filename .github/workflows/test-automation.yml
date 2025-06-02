@@ -31,7 +31,7 @@ jobs:
     - name: Install dependencies
       run: |
         npm ci
-        npm install multiple-cucumber-html-reporter --save-dev
+        npm list multiple-cucumber-html-reporter
 
     - name: Install Playwright browsers
       run: npx playwright install --with-deps chromium
@@ -39,7 +39,7 @@ jobs:
     - name: Create directories for artifacts
       run: |
         mkdir -p test-results
-        mkdir -p playwright-report
+        mkdir -p playwright-report/cucumber-report
         mkdir -p screenshots
         ls -la
 
@@ -61,7 +61,15 @@ jobs:
 
     - name: Generate detailed HTML report
       if: always()
-      run: npm run generate:report
+      run: |
+        echo "Current directory:"
+        pwd
+        echo "Directory contents:"
+        ls -la
+        echo "Checking for report script:"
+        ls -la src/utils/
+        echo "Running report generation:"
+        node src/utils/generate-report.js
 
     - name: List artifacts before upload
       if: always()
