@@ -9,6 +9,11 @@ module.exports = {
             'html:cucumber-report.html'
         ],
         parallel: 1,
-        publishQuiet: true
+        publishQuiet: true,
+        worldParameters: {
+            browserOptions: {
+                headless: true
+            }
+        }
     }
 }; 

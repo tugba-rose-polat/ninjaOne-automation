@@ -18,7 +18,7 @@ async function activateAccount() {
 
         // Launch browser and activate account
         console.log('\nOpening activation link in browser...');
-        browser = await chromium.launch({ headless: false });
+        browser = await chromium.launch({ headless: true });
         const page = await browser.newPage();
         
         await page.goto(activationLink);
