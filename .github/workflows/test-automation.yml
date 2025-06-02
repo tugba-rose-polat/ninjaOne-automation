@@ -1,11 +1,10 @@
 name: NinjaOne Test Automation
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+  schedule:
+    # Runs at 13:00 UTC (9:00 AM EST) every day
+    - cron: '0 13 * * *'
+  workflow_dispatch:  # Keeps manual trigger option
 
 jobs:
   test:
