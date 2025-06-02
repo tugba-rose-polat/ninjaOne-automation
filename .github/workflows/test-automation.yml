@@ -29,7 +29,9 @@ jobs:
       run: ls -la
 
     - name: Install dependencies
-      run: npm ci
+      run: |
+        npm ci
+        npm install multiple-cucumber-html-reporter --save-dev
 
     - name: Install Playwright browsers
       run: npx playwright install --with-deps chromium
