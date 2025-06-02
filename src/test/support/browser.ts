@@ -13,7 +13,7 @@ export async function setupBrowser() {
 
         // Launch new browser
         browser = await chromium.launch({ 
-            headless: false,
+            headless: true,
             slowMo: 100
         });
 
