@@ -32,10 +32,20 @@ jobs:
         mkdir -p playwright-report
         mkdir -p screenshots
 
+    - name: Create .env file
+      run: |
+        echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+        echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+
+    - name: Create token.json
+      run: |
+        echo '${{ secrets.GMAIL_TOKEN }}' > token.json
+
     - name: Run Cucumber tests
       run: npx cucumber-js src/test/features/login.feature --format html:cucumber-report.html --format json:test-results/cucumber-report.json
       env:
-        GMAIL_TOKEN: ${{ secrets.GMAIL_TOKEN }}
+        GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       continue-on-error: true
 
     - name: Generate detailed HTML report
