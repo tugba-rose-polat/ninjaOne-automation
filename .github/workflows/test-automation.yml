@@ -24,6 +24,11 @@ jobs:
       with:
         node-version: '18'
 
+    - name: Install xvfb
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb
+
     - name: Clean install dependencies
       run: |
         echo "Current directory contents:"
@@ -58,7 +63,7 @@ jobs:
     - name: Run Cucumber tests with HTML report
       run: |
         echo "Running Cucumber tests..."
-        npx cucumber-js \
+        xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npx cucumber-js \
           src/test/features/login.feature \
           --format progress-bar \
           --format html:playwright-report/cucumber-report.html \
@@ -70,7 +75,7 @@ jobs:
         GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         DEBUG: pw:api
-        PWDEBUG: 1
+        PLAYWRIGHT_HEADLESS: 1
       continue-on-error: true
 
     - name: List artifacts
