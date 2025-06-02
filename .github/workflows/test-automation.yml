@@ -57,14 +57,20 @@ jobs:
 
     - name: Run Cucumber tests with HTML report
       run: |
+        echo "Running Cucumber tests..."
         npx cucumber-js \
           src/test/features/login.feature \
+          --format progress-bar \
           --format html:playwright-report/cucumber-report.html \
           --format json:test-results/cucumber-report.json \
-          --format summary
+          --format summary \
+          --format @cucumber/pretty-formatter \
+          --publish-quiet
       env:
         GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        DEBUG: pw:api
+        PWDEBUG: 1
       continue-on-error: true
 
     - name: List artifacts
