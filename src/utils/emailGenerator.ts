@@ -11,7 +11,7 @@ export class EmailGenerator {
      */
     static generateTestEmail(): string {
         // Generate random number between 1 and 999
-        const randomNum = Math.floor(Math.random() * 999) + 1;
+        const randomNum = Math.floor(Math.random() * 9999) + 1;
         // Pad with leading zeros to ensure 3 digits
         const paddedNum = randomNum.toString().padStart(3, '0');
         

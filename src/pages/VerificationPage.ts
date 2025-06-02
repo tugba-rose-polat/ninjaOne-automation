@@ -7,7 +7,7 @@ export class VerificationPage extends BasePage {
 
     constructor(page: Page) {
         super(page);
-        this.gmailHelper = new GmailHelper();
+        this.gmailHelper = GmailHelper.getInstance();
     }
 
     async waitForVerificationEmail(email: string): Promise<string | null> {

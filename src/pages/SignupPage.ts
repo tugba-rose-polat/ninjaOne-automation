@@ -16,10 +16,30 @@ export interface SignupFormData {
 
 export class SignupPage extends BasePage {
     private readonly gmailHelper: GmailHelper;
+    private readonly selectors = {
+        organizationInput: 'input[name="organization"]',
+        firstNameInput: 'input[name="firstName"]',
+        lastNameInput: 'input[name="lastName"]',
+        emailInput: 'input[name="email"]',
+        passwordInput: 'input[name="password"]',
+        passwordConfirmInput: 'input[name="passwordConfirm"]',
+        phoneInput: 'input[type="tel"]',
+        submitButton: 'button[type="submit"]',
+        verificationMessage: '//p[contains(text(), "Please check your email")]',
+        activationSuccessMessage: [
+            'text=Your account has been successfully activated.'
+        ],
+        commonElements: [
+            'form',
+            'button[type="submit"]',
+            '.signup-form',
+            '.login-form'
+        ]
+    };
     
     constructor(page: Page) {
         super(page);
-        this.gmailHelper = new GmailHelper();
+        this.gmailHelper = GmailHelper.getInstance();
     }
 
     async navigateToSignup() {
@@ -60,18 +80,63 @@ export class SignupPage extends BasePage {
         await this.page.fill(this.selectors.lastNameInput, data.lastName);
         await this.page.fill(this.selectors.emailInput, data.email);
         await this.page.fill(this.selectors.passwordInput, data.password);
+        await this.page.waitForSelector(this.selectors.passwordConfirmInput, { timeout: 5000 });
         await this.page.fill(this.selectors.passwordConfirmInput, data.password);
         await this.page.fill(this.selectors.phoneInput, data.phoneNumber);
     }
 
     async submitForm() {
         console.log('Submitting form...');
+        
+        // Wait for reCAPTCHA to be ready
+        await this.page.waitForFunction(() => {
+            return typeof (window as any).grecaptcha !== 'undefined' && 
+                   typeof (window as any).grecaptcha.enterprise !== 'undefined';
+        });
+        
+        // Execute reCAPTCHA
+        console.log('Executing reCAPTCHA...');
+        await this.page.evaluate(() => {
+            return new Promise((resolve) => {
+                (window as any).grecaptcha.enterprise.execute('6LfU_ewjAAAAALijOMmbngnUNShlrhRauhUdACO-', {action: 'submit'})
+                    .then((token: string) => {
+                        console.log('reCAPTCHA token:', token);
+                        resolve(token);
+                    });
+            });
+        });
+        
+        // Wait for the submit button to be enabled
+        await this.page.waitForSelector('button[type="submit"]:not([disabled])', { timeout: 10000 });
+        
+        // Click the submit button
         await this.page.click(this.selectors.submitButton);
+        
+        // Wait for any navigation
+        await this.page.waitForLoadState('networkidle');
+        
+        // Get and log the current URL
+        const currentUrl = await this.page.url();
+        console.log('Current URL after submission:', currentUrl);
+        
+        // Take a screenshot
+        await this.takeScreenshot('after-submit');
+        
+        // Get and log the page content
+        const content = await this.page.content();
+        console.log('Page content after submission:', content);
     }
 
     async waitForVerificationMessage() {
         console.log('Waiting for verification message...');
-        await this.page.waitForSelector(this.selectors.verificationMessage);
+        await this.page.waitForLoadState('networkidle');
+        
+        // Try to find any text that might be similar
+        const pageText = await this.page.textContent('body');
+        console.log('Page text:', pageText);
+        
+        await this.page.waitForSelector(this.selectors.verificationMessage, { state: 'visible', timeout: 30000 });
+        console.log('Found verification message');
     }
 
     async navigateToActivationLink(activationLink: string) {

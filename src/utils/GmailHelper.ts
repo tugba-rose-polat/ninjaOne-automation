@@ -28,13 +28,38 @@ export class GmailHelper {
     private gmail: any;
 
     private constructor() {
+        // Load environment variables
+        dotenv.config();
+        
+        // Debug log environment variables
+        console.log('\n=== Gmail API Configuration ===');
+        console.log('Client ID:', process.env.GOOGLE_CLIENT_ID ? '✓ Set' : '× Not set');
+        console.log('Client Secret:', process.env.GOOGLE_CLIENT_SECRET ? '✓ Set' : '× Not set');
+        console.log('Refresh Token:', process.env.GMAIL_REFRESH_TOKEN ? '✓ Set' : '× Not set');
+        
+        // Initialize OAuth2 client with credentials from .env
+        const clientId = process.env.GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+        const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
+        
+        if (!clientId || !clientSecret || !refreshToken) {
+            throw new Error('Missing required Gmail API credentials in .env file');
+        }
+        
         this.oauth2Client = new google.auth.OAuth2(
-            process.env.GOOGLE_CLIENT_ID,
-            process.env.GOOGLE_CLIENT_SECRET,
+            clientId,
+            clientSecret,
             'http://localhost:3000/oauth2callback'
         );
 
+        // Set credentials
+        this.oauth2Client.setCredentials({
+            refresh_token: refreshToken
+        });
+
+        // Initialize Gmail API
         this.gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
+        console.log('✓ Gmail API initialized successfully\n');
     }
 
     static getInstance(): GmailHelper {
@@ -128,15 +153,43 @@ export class GmailHelper {
 
     private extractActivationLink(message: any): string | null {
         try {
-            const body = message.payload.parts.find((part: any) => part.mimeType === 'text/html')?.body?.data;
-            if (!body) return null;
+            console.log('Extracting activation link from email...');
+            
+            // Try to find HTML part first
+            const htmlPart = message.payload.parts?.find((part: any) => part.mimeType === 'text/html');
+            const plainPart = message.payload.parts?.find((part: any) => part.mimeType === 'text/plain');
+            
+            // Get body data from HTML or plain text part
+            const bodyData = htmlPart?.body?.data || plainPart?.body?.data || message.payload.body?.data;
+            
+            if (!bodyData) {
+                console.log('No email body found');
+                return null;
+            }
 
-            const decodedBody = Buffer.from(body, 'base64').toString('utf-8');
+            const decodedBody = Buffer.from(bodyData, 'base64').toString('utf-8');
             const htmlContent = decode(decodedBody);
-
-            // Look for the activation link
-            const matches = htmlContent.match(/href="(https:\/\/app\.ninjarmm\.com\/auth\/#\/activate\/[^"]+)"/);
-            return matches ? matches[1] : null;
+            
+            console.log('Searching for activation link in email body...');
+            
+            // Try different patterns to find the activation link
+            const patterns = [
+                /href="(https:\/\/app\.ninjarmm\.com\/auth\/#\/activate\/[^"]+)"/,
+                /(https:\/\/app\.ninjarmm\.com\/auth\/#\/activate\/[^\s"<>]+)/,
+                /href="([^"]+activate[^"]+)"/,
+                /https:\/\/[^\s<>"]+?activate[^\s<>"]+/
+            ];
+            
+            for (const pattern of patterns) {
+                const matches = htmlContent.match(pattern);
+                if (matches && matches[1]) {
+                    console.log('Found activation link with pattern:', pattern);
+                    return matches[1];
+                }
+            }
+            
+            console.log('No activation link found in email body');
+            return null;
         } catch (error) {
             console.error('Error extracting activation link:', error);
             return null;
