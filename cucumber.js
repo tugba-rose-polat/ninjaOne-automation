@@ -12,7 +12,7 @@ module.exports = {
         publishQuiet: true,
         worldParameters: {
             browserOptions: {
-                headless: true
+                headless: process.env.PLAYWRIGHT_HEADLESS !== 'false'
             }
         }
     }

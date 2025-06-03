@@ -55,7 +55,7 @@ jobs:
       run: |
         echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
         echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
-
+        echo "REFRESH_TOKEN=${{ secrets.REFRESH_TOKEN }}" >> .env
     - name: Create token.json
       run: |
         echo '${{ secrets.GMAIL_TOKEN }}' > token.json

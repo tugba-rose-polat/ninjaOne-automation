@@ -11,9 +11,12 @@ export async function setupBrowser() {
             await teardownBrowser();
         }
 
+        const isHeadless = process.env.PLAYWRIGHT_HEADLESS !== 'false';
+        console.log(`Launching browser in ${isHeadless ? 'headless' : 'headed'} mode`);
+
         // Launch new browser
         browser = await chromium.launch({ 
-            headless: true,
+            headless: isHeadless,
             slowMo: 100
         });
 
