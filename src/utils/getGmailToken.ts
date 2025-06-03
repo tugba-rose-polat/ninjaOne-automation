@@ -2,11 +2,18 @@ import { google } from 'googleapis';
 import * as http from 'http';
 import { AddressInfo } from 'net';
 import open from 'open';
+import dotenv from 'dotenv';
 
-// Replace these with your OAuth 2.0 credentials
-const CLIENT_ID = 'YOUR_CLIENT_ID';
-const CLIENT_SECRET = 'YOUR_CLIENT_SECRET';
-const REDIRECT_URI = 'http://localhost:3000/oauth2callback';
+// Load environment variables
+dotenv.config();
+
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = 'http://localhost:3000';
+
+if (!CLIENT_ID || !CLIENT_SECRET) {
+    throw new Error('Missing required environment variables: GOOGLE_CLIENT_ID and/or GOOGLE_CLIENT_SECRET');
+}
 
 const oauth2Client = new google.auth.OAuth2(
     CLIENT_ID,

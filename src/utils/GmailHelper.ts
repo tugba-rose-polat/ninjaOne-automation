@@ -1,25 +1,17 @@
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import * as path from 'path';
-import * as fs from 'fs';
 import { decode } from 'html-entities';
 import { Page } from '@playwright/test';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-interface GoogleCredentials {
-    client_id: string;
-    client_secret: string;
-    redirect_uri?: string;
-}
-
 export class GmailHelper {
     private static readonly SCOPES = [
         'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/gmail.modify'
     ];
-    private static readonly TOKEN_PATH = '/Users/tugba/Desktop/ninja/token.json';
+
     private static readonly SENDER = 'noreply@ninjaone.com';
     private static readonly SUBJECT_PATTERN = 'Activate your NinjaOne Account';
 
@@ -49,7 +41,7 @@ export class GmailHelper {
         this.oauth2Client = new google.auth.OAuth2(
             clientId,
             clientSecret,
-            'http://localhost:3000/oauth2callback'
+            'http://localhost:3000'
         );
 
         // Set credentials
@@ -69,133 +61,6 @@ export class GmailHelper {
         return GmailHelper.instance;
     }
 
-    private async initializeGmailAPI(credentials: GoogleCredentials) {
-        try {
-            const { client_id, client_secret, redirect_uri } = credentials;
-
-            // Create OAuth2 client
-            this.oauth2Client = new google.auth.OAuth2(
-                client_id,
-                client_secret,
-                redirect_uri || 'http://localhost'
-            );
-
-            // Check if we have previously stored a token
-            if (fs.existsSync(GmailHelper.TOKEN_PATH)) {
-                const token = JSON.parse(fs.readFileSync(GmailHelper.TOKEN_PATH, 'utf-8'));
-                this.oauth2Client.setCredentials(token);
-            } else {
-                await this.getNewToken();
-            }
-
-            // Initialize Gmail API
-            this.gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
-            
-        } catch (error) {
-            console.error('Error initializing Gmail API:', error);
-            throw error;
-        }
-    }
-
-    private async getNewToken() {
-        const authUrl = this.oauth2Client.generateAuthUrl({
-            access_type: 'offline',
-            scope: GmailHelper.SCOPES,
-        });
-
-        console.log('Authorize this app by visiting this url:', authUrl);
-        console.log('After authorization, copy the code from the browser and create a token.json file with the following structure:');
-        console.log('{');
-        console.log('  "access_token": "YOUR_ACCESS_TOKEN",');
-        console.log('  "refresh_token": "YOUR_REFRESH_TOKEN",');
-        console.log('  "scope": "https://www.googleapis.com/auth/gmail.readonly",');
-        console.log('  "token_type": "Bearer",');
-        console.log('  "expiry_date": EXPIRY_TIMESTAMP');
-        console.log('}');
-        
-        throw new Error('Please complete OAuth2 authorization and create token.json file');
-    }
-
-    async waitForActivationEmail(recipientEmail: string, timeoutMs: number = 60000): Promise<string | null> {
-        console.log(`Waiting for activation email for ${recipientEmail}...`);
-        const startTime = Date.now();
-
-        while (Date.now() - startTime < timeoutMs) {
-            try {
-                const messages = await this.gmail.users.messages.list({
-                    userId: 'me',
-                    q: `from:${GmailHelper.SENDER} to:${recipientEmail} subject:"${GmailHelper.SUBJECT_PATTERN}" is:unread`,
-                });
-
-                if (messages.data.messages && messages.data.messages.length > 0) {
-                    const message = await this.gmail.users.messages.get({
-                        userId: 'me',
-                        id: messages.data.messages[0].id,
-                    });
-
-                    // Extract activation link from email body
-                    const activationLink = this.extractActivationLink(message.data);
-                    if (activationLink) {
-                        console.log('Found activation link:', activationLink);
-                        return activationLink;
-                    }
-                }
-
-                // Wait 5 seconds before checking again
-                await new Promise(resolve => setTimeout(resolve, 5000));
-            } catch (error) {
-                console.error('Error checking for activation email:', error);
-            }
-        }
-
-        throw new Error(`Timeout waiting for activation email for ${recipientEmail}`);
-    }
-
-    private extractActivationLink(message: any): string | null {
-        try {
-            console.log('Extracting activation link from email...');
-            
-            // Try to find HTML part first
-            const htmlPart = message.payload.parts?.find((part: any) => part.mimeType === 'text/html');
-            const plainPart = message.payload.parts?.find((part: any) => part.mimeType === 'text/plain');
-            
-            // Get body data from HTML or plain text part
-            const bodyData = htmlPart?.body?.data || plainPart?.body?.data || message.payload.body?.data;
-            
-            if (!bodyData) {
-                console.log('No email body found');
-                return null;
-            }
-
-            const decodedBody = Buffer.from(bodyData, 'base64').toString('utf-8');
-            const htmlContent = decode(decodedBody);
-            
-            console.log('Searching for activation link in email body...');
-            
-            // Try different patterns to find the activation link
-            const patterns = [
-                /href="(https:\/\/app\.ninjarmm\.com\/auth\/#\/activate\/[^"]+)"/,
-                /(https:\/\/app\.ninjarmm\.com\/auth\/#\/activate\/[^\s"<>]+)/,
-                /href="([^"]+activate[^"]+)"/,
-                /https:\/\/[^\s<>"]+?activate[^\s<>"]+/
-            ];
-            
-            for (const pattern of patterns) {
-                const matches = htmlContent.match(pattern);
-                if (matches && matches[1]) {
-                    console.log('Found activation link with pattern:', pattern);
-                    return matches[1];
-                }
-            }
-            
-            console.log('No activation link found in email body');
-            return null;
-        } catch (error) {
-            console.error('Error extracting activation link:', error);
-            return null;
-        }
-    }
-
     async activateAccount(page: Page, activationLink: string): Promise<boolean> {
         try {
             console.log('Navigating to activation link...');
@@ -211,20 +76,6 @@ export class GmailHelper {
             console.error('Error activating account:', error);
             await page.screenshot({ path: 'activation-error.png' });
             return false;
-        }
-    }
-
-    async markEmailAsRead(messageId: string) {
-        try {
-            await this.gmail.users.messages.modify({
-                userId: 'me',
-                id: messageId,
-                requestBody: {
-                    removeLabelIds: ['UNREAD'],
-                },
-            });
-        } catch (error) {
-            console.error('Error marking email as read:', error);
         }
     }
 

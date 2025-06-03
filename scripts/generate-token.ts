@@ -17,7 +17,7 @@ const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    'http://localhost:3000/oauth2callback'
+    'http://localhost:3000'
 );
 
 async function generateToken() {
